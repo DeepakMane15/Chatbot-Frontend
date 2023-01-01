@@ -1,0 +1,40 @@
+<nav class="navbar navbar-expand-lg bg-light fixed-top">
+  <div class="container-fluid">
+    <a class="navbar-brand" href="#">ChatBot</a>
+
+  </div>
+</nav>
+<div class="chat-container" #scrollMe [scrollTop]="scrollMe.scrollHeight">
+  <ng-container *ngFor="let data of messageres">
+
+    <div class="chat-holder">
+      <!-- <?xml version="1.0" ?><svg data-name="Livello 1" id="Livello_1" viewBox="0 0 66 66" xmlns="http://www.w3.org/2000/svg"><defs><style>.cls-1{fill:none;stroke:#fff;stroke-linecap:round;stroke-linejoin:round;stroke-width:2px;}</style></defs><title/><path d="M1,34A32,32,0,1,0,33,2,32,32,0,0,0,1,34Z"/><g id="Phone"><path class="cls-1" d="M34.93,40.84c1-.09,2.95-1.92,4-2a4,4,0,0,1,2.78.8l2.68,2L46,42.92a2.52,2.52,0,0,1,.43,3.62l-3.11,4a1.12,1.12,0,0,1-1,.43c-13.5-1.21-24.24-12.26-24.24-25.68a25,25,0,0,1,1-7,0.66,0.66,0,0,1,.5-0.45l5.91-.83a2.63,2.63,0,0,1,3.12,2L29,21l0.65,3.26a3.75,3.75,0,0,1-.53,2.78c-0.54.84-3.09,1.68-3.64,2.53h0A19.39,19.39,0,0,0,34.93,41V40.84Z"/></g></svg> -->
+      <div class="uf-chat-icon"
+        [ngClass]="data.type == 'Agent' ? 'cust-icon uf-float-l' : 'agent-icon uf-float-r'"><img
+          [src]="data.type == 'Agent' ? 'assets/images/agent.svg' : 'assets/images/customer.svg'" alt=""
+          srcset=""></div>
+      <div class="uf-chat-message" [ngClass]="data.type == 'Agent' ? 'uf-float-r' : 'cust-icon uf-float-l'">
+        {{data.message}} </div>
+    </div>
+    <div class="clear"></div>
+    <!-- <div class="chat-holder">
+      <?xml version="1.0" ?><!DOCTYPE svg  PUBLIC '-//W3C//DTD SVG 1.1//EN'  'http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd'><svg enable-background="new 0 0 50 50" height="50px" id="Layer_1" version="1.1" viewBox="0 0 50 50" width="50px" xml:space="preserve" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink"><circle cx="25" cy="25" fill="none" r="24" stroke="#000000" stroke-linecap="round" stroke-miterlimit="10" stroke-width="2"/><rect fill="none" height="50" width="50"/><path d="M29.933,35.528c-0.146-1.612-0.09-2.737-0.09-4.21c0.73-0.383,2.038-2.825,2.259-4.888c0.574-0.047,1.479-0.607,1.744-2.818  c0.143-1.187-0.425-1.855-0.771-2.065c0.934-2.809,2.874-11.499-3.588-12.397c-0.665-1.168-2.368-1.759-4.581-1.759  c-8.854,0.163-9.922,6.686-7.981,14.156c-0.345,0.21-0.913,0.878-0.771,2.065c0.266,2.211,1.17,2.771,1.744,2.818  c0.22,2.062,1.58,4.505,2.312,4.888c0,1.473,0.055,2.598-0.091,4.21c-1.261,3.39-7.737,3.655-11.473,6.924  c3.906,3.933,10.236,6.746,16.916,6.746s14.532-5.274,15.839-6.713C37.688,39.186,31.197,38.93,29.933,35.528z"/></svg>
+        <div class="uf-chat-icon cust-icon uf-float-r"><img src="..src\customer.svg" alt="" srcset=""></div>
+        <div class="uf-chat-message uf-float-r">{{data.message}}</div>
+    </div> -->
+
+  </ng-container>
+</div>
+<div class="messgaebox d-flex">
+<!-- <div class="attachment">
+  <input type="file"  name="" id="">
+</div> -->
+<div class="messgaetyping">
+  <input type="text" name="" id="" [(ngModel)]="msg" >
+</div>
+<div class="send_icon">
+  <button (click)="sendMsg()"> send</button>
+</div>
+</div>
+
+

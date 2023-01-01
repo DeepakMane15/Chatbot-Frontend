@@ -1,0 +1,47 @@
+.chat-container,
+.km-container,
+.entity-container {
+  margin-top:50px;
+width: 100%;
+margin: 5px 0;
+background: #efefef;
+height: 88vh;
+/* overflow-y: auto; */
+scroll-behavior: smooth;
+}
+
+
+.uf-chat-icon {
+  width: 30px;
+  height: 30px;
+  /* margin: 5px; */
+  border-radius: 100%;
+  background-size: 100%;
+  background-repeat: no-repeat;
+  box-shadow: 1px 1px 10px #efefef;
+}
+
+/* .agent-icon {
+  background-image: url(.././../assets/images/agent.svg);
+}
+
+.cust-icon {
+  background-image: url(.././../assets/images/customer.svg);
+} */
+
+.uf-float-l {
+  float: left;
+}
+
+.uf-float-r {
+  float: right;
+}
+
+.uf-chat-message {
+  max-width: 90%;
+  padding: 10px;
+  border-radius: 10px;
+  background: #efefef;
+  box-shadow: 1px 1px 10px #efefef;
+  /* word-spacing: 100vh; */
+}
