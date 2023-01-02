@@ -180,7 +180,7 @@
   height: 60px;
   bottom: 20px;
   right: 25px;
-  background-image: url('https://test.unfyd.com/clientsite/botOpen.svg');
+  background-image: url('src\assets\images\chat.png');
   background-size: cover;
   cursor: pointer;
   border: none;
