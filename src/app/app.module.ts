@@ -22,7 +22,7 @@ import { CookieService } from 'ngx-cookie-service';
     HttpClientModule,
     AppRoutingModule,
   ],
-  providers: [],
+  providers: [CookieService],
   bootstrap: [AppComponent]
 })
 export class AppModule { }

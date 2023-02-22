@@ -15,7 +15,7 @@
               <div *ngIf="data.hasButtons == 1">
               <p *ngFor="let b of data.buttonValues">
                 <a *ngIf="b.t=='hl'" href="{{b.g}}" target="_blank"  type="button" class="btn btn-light" style="border: 1px solid black;"> {{b.value}} </a>
-                <button *ngIf="!(b.t=='hl')" type="button" class="btn btn-light" style="border: 1px solid black;" (click)="sendMsg('btn',b,data.smid,b.a,b.s)">{{b.value}}  <a *ngIf ="b.d == 1">({{defaultTimer}}) </a></button>
+                <button *ngIf="!(b.t=='hl')" type="button" class="btn btn-light" style="border: 1px solid black;" (click)="sendMsg('btn',b,data.smid,b.route,b.s)">{{b.value}}  <a *ngIf ="b.d == 1">({{defaultTimer}}) </a></button>
               </p>
             </div>
           </div>

@@ -28,13 +28,22 @@ export class ChatboxComponent implements OnInit {
   recentMessage: any;
   orderObj: any;
   interval: any;
+  noResponseInterval: any
   defaultTimer: any;
   businessvfr: any;
   preResponse: any = {};
   validate = false;
   validateType: any;
+  businessConfigurations: any;
+  noResponseTimeout: any;
+  timeEnabled = true;
+  chatWithAgent = false;
+  AgentId: any;
+
+
   ngOnInit(): void {
     //get the business id from url
+    // socket.emit('join', "PVYmW8wZdJsXNNDcAAAY is the data")
 
     this.route.queryParamMap
       .subscribe((params) => {
@@ -43,13 +52,16 @@ export class ChatboxComponent implements OnInit {
       }
       );
     //check if sessionid exists\
-    this.chatbbot_service.VerifyBusiness({ bid: this.orderObj.params.bid }).subscribe(res => {
+    this.chatbbot_service.VerifyBusiness({ActionFlag:"FETCH",Action:"VerifyBusiness", bid: this.orderObj.params.bid }).subscribe(res => {
+      // alert(res.status)
       if (res.status == 200) {
         console.log(res.data)
         this.businessvfr = res.data[0];
         console.log(res.data[0], "asdbas");
       }
     })
+    this.getBusinessConfigurations(this.orderObj.params.bid);
+    console.log("this.businessConfigurations " + this.businessConfigurations)
     if (this.cookieService.get("SessionId")) {
       this.messageres = JSON.parse(localStorage.getItem(this.cookieService.get("SessionId")));
       let length = localStorage.getItem(this.cookieService.get("SessionId") + "length");
@@ -71,18 +83,51 @@ export class ChatboxComponent implements OnInit {
 
     } else {
       // alert("hej")
-      this.cookieService.set("SessionId", this.orderObj.params.bid + "|" + uuidv4());
+      let SessionID = this.orderObj.params.bid + "|" + uuidv4()
+      this.cookieService.set("SessionId", SessionID);
+      this.chatbbot_service.joinRoom(SessionID);
       this.GetBusinessData(0);
     }
     this.checkIfSessionEnded()
+    this.chatbbot_service.agentJoinedMessage()
+    this.chatbbot_service.dataState.subscribe(
+      (data: any) => {
+        console.log(data);
+        this.AgentId = data.agentId
+        // alert(this.AgentId)
+        this.chatWithAgent = true;
+        this.validate = true;
+        // AgentJoinMessage
+        let agentJoinMessage = this.businessConfigurations.filter(d => d.configurationName == 'AgentJoinMessage');
+        console.log(this.businessConfigurations)
+        // if(data.agentName != undefined){
+        agentJoinMessage = agentJoinMessage[0].configurationValue.replace("{{name}}", data.agentName)
+        this.messageres.push({
+          type: 'Agent', message: agentJoinMessage.split("\\n"),
+          buttonValues: [{}], keyboardInput: 1
+        })
+      }
+    // }
+    )
+    this.chatbbot_service.receiveAgentMessageBySocket();
+    this.chatbbot_service.dataState1.subscribe( data => {
+      this.messageres.push({
+        type: 'Agent', message: [data],
+        buttonValues: [{}], keyboardInput: 1
+      })
+    })
+    // if()
 
   }
 
   checkIfSessionEnded() {
     console.log("from check sess", this.messageres)
-    if ('endChat' in this.messageres[this.messageres.length - 1] && this.messageres[this.messageres.length - 1].endChat == 1) {
-      this.endSession();
+    if (this.messageres != undefined && this.messageres != null && this.messageres.length > 0) {
+      if ('endChat' in this.messageres[this.messageres.length - 1] && this.messageres[this.messageres.length - 1].endChat == 1) {
+        this.endSession();
+      }
     }
+
   }
 
   changeMessageStatus() {
@@ -113,7 +158,7 @@ export class ChatboxComponent implements OnInit {
         let buttons = JSON.parse(this.businessData[0].buttonValues)
         this.messageres.push({
           smid: this.businessData[0].id, type: 'Agent', message: msg, buttonValues: buttons, keyboardInput: this.businessData[0].keyboardInput, expectedInput: this.businessData[0].expectedInput, repeatMessage: this.businessData[0].repeatMessage,
-          defaultResponse: this.businessData[0].defaultResponse, hasButtons: this.businessData[0].hasButtons, endChat:this.businessData[0].endChat
+          defaultResponse: this.businessData[0].defaultResponse, hasButtons: this.businessData[0].hasButtons, endChat: this.businessData[0].endChat
         })
         if (res.data[0].preResponse != undefined && res.data[0].preResponse != null && res.data[0].preResponse.length > 0) {
           this.preResponse = {
@@ -143,17 +188,62 @@ export class ChatboxComponent implements OnInit {
   sendEmail(maidId) {
     this.chatbbot_service.sendEmail({ maidId: maidId }).subscribe(res => {
       if (res.status == 200) {
-        alert("mail sent")
+        // alert("mail sent")
       }
     })
   }
 
-  sendMsg(type: any, data: any, smid: any, route: any, skill: any) {
+  async sendMsg(type: any, data: any, smid: any, route: any, skill: any) {
+    await clearInterval(this.noResponseInterval);
+    if (route == 'true') {
+      this.timeEnabled = false
+      // alert(route)
+      let Data = {
+        ActionFlag: 'ADD',
+        bid: this.orderObj.params.bid,
+        customerId: this.cookieService.get("SessionId")
+      }
+      console.log(Data)
+      this.chatbbot_service.routeChat(Data).subscribe(res => {
+        console.log("res", res)
+        if (res.status == 200) {
+          // alert("You are being route to our agent " + skill);
+          this.messageres.push({ type: 'Customer', message: [data.value] })
+          console.log(this.businessConfigurations)
+          let routeMessage = this.businessConfigurations.filter(d => d.configurationName == 'RouteMessage');
+          console.log(routeMessage[0].configurationValue)
+          this.messageres.push({
+            smid: this.messageres[this.messageres.length - 1].smid, type: 'Agent', message: routeMessage[0].configurationValue.split("\\n"),
+            buttonValues: [{}], keyboardInput: this.messageres[this.messageres.length - 1].keyboardInput, expectedInput: this.messageres[this.messageres.length - 1].expectedInput, repeatMessage: this.messageres[this.messageres.length - 1].repeatMessage,
+            defaultResponse: this.messageres[this.messageres.length - 1].defaultResponse, hasButtons: 0, endChat: this.messageres[this.messageres.length - 1].endChat, attributeValue: this.messageres[this.messageres.length - 1].attributeValue
+          })
+          console.log(this.messageres)
+        }
+      })
+      let roomId = "bid-" + this.orderObj.params.bid
+      socket.emit("fetchInteractions", roomId)
+      socket.emit("join", this.cookieService.get("SessionId"))
 
-    if (route == 1) {
-      alert("You are being route to our agent please wait up of skill " + skill);
+      // socket.on("agentJoined", data => {
+      // this.chatWithAgent = true;
+      // this.validate = true;
+      // // AgentJoinMessage
+      // let agentJoinMessage = this.businessConfigurations.filter(d => d.configurationName == 'AgentJoinMessage');
+      // console.log(this.businessConfigurations)
+      // this.messageres.push({
+      //   type: 'Agent', message: agentJoinMessage[0].configurationValue.split("\\n"),
+      //   buttonValues: [{}], keyboardInput: 1
+      // })
+      // })
+
+
     }
     var rid = 0;
+
+    var aid = ""
+    if (data.aid != undefined && data.aid != "" && data.aid != null) {
+      aid = data.aid;
+    }
 
     if (smid == "" || smid == undefined) {
       smid = this.messageres[this.messageres.length - 1].smid;
@@ -167,14 +257,44 @@ export class ChatboxComponent implements OnInit {
     }
 
 
+    if (this.chatWithAgent) {
+      // alert("hh");
+      // socket.emit("sendMessage", { room: this.cookieService.get("SessionId"), message: message });
 
-    if (this.businessvfr.status == 1 && this.businessvfr.chatbotType == 'static') {
+      let parameters = {
+        bid: this.orderObj.params.bid,
+        type: 'text',
+        response: this.msg,
+        from: 'customer',
+        customerId: this.cookieService.get('SessionId'),
+        agentId: this.AgentId
+      }
+      this.chatbbot_service.SendAgentMessage(parameters).subscribe(res => {
+        if (res.status == 200) {
+          // alert(message)
+          this.messageres.push({ type: 'Customer', message: [message] })
+          this.chatbbot_service.sendAgentMessageBySocket({ room: this.cookieService.get("SessionId"), message: message })
+
+        }
+      })
+    }
+    else if (this.businessvfr.status == 1 && this.businessvfr.chatbotType == 'static') {
       console.log("template", this.recentMessage)
-      if (!this.validate || (this.validate == true && EmailValidator.validate(this.msg))) {
+      if (!this.validate || (this.validate == true && (this.validateType == 'email') ? EmailValidator.validate(this.msg) : true)) {
         // if()
         this.validate = false;
-        this.chatbbot_service.GetAutoResponse({ bid: this.orderObj.params.bid, smid: smid, rid: rid, response: message, template: this.recentMessage, from: 'customer', customerId: this.cookieService.get("SessionId"), agentId: "" }).subscribe(res => {
-          this.messageres.push({ type: 'Customer', message: [message] })
+        let customerAttribute = 'false';
+        let attributeName = null;
+        let attributeValue = null;
+        if (this.messageres[this.messageres.length - 1].attributeValue == 1) {
+          customerAttribute = 'true';
+          attributeName = this.messageres[this.messageres.length - 1].expectedInput;
+          attributeValue = message
+        }
+        this.chatbbot_service.GetAutoResponse({ ActionFlag: "FETCH", bid: this.orderObj.params.bid, aid: aid, smid: smid, rid: rid, response: message, template: this.recentMessage, from: 'customer', customerId: this.cookieService.get("SessionId"), agentId: "", customerAttribute: customerAttribute, attributeName: attributeName, attributeValue: attributeValue }).subscribe(res => {
+          if (route != 'true') {
+            this.messageres.push({ type: 'Customer', message: [message] })
+          }
           if (Object.keys(this.preResponse).length > 0) {
             this.messageres.push(this.preResponse);
             Object.keys(this.preResponse).forEach((key) => delete this.preResponse[key]);
@@ -190,7 +310,7 @@ export class ChatboxComponent implements OnInit {
             this.messageres.push({
               smid: res.data[0].id, type: 'Agent', message: res.data[0].response.split("\\n"),
               buttonValues: JSON.parse(res.data[0].buttonValues), keyboardInput: res.data[0].keyboardInput, expectedInput: res.data[0].expectedInput, repeatMessage: res.data[0].repeatMessage,
-              defaultResponse: res.data[0].defaultResponse, hasButtons: res.data[0].hasButtons,endChat:res.data[0].endChat
+              defaultResponse: res.data[0].defaultResponse, hasButtons: res.data[0].hasButtons, endChat: res.data[0].endChat, attributeValue: res.data[0].attributeValue
             })
             if (this.messageres[this.messageres.length - 1].keyboardInput == 1) {
               this.validate = true;
@@ -209,6 +329,10 @@ export class ChatboxComponent implements OnInit {
 
             }
 
+            if (res.data[0].endChat != 1) {
+              this.ResponseTimer(this.noResponseTimeout, route);
+            }
+
             localStorage.setItem(this.cookieService.get("SessionId"), JSON.stringify(this.messageres));
             localStorage.setItem(this.cookieService.get("SessionId") + "recentMsg", JSON.stringify(this.recentMessage));
             localStorage.setItem(this.cookieService.get("SessionId") + "length", String(this.messageres.length));
@@ -220,15 +344,15 @@ export class ChatboxComponent implements OnInit {
 
         this.messageres.push({
           buttonValues: this.messageres[this.messageres.length - 2].buttonValues,
-          defaultResponse: "Please enter valid input",
+          defaultResponse: this.messageres[this.messageres.length - 2].defaultResponse,
           expectedInput: this.messageres[this.messageres.length - 2].expectedInput,
           keyboardInput: this.messageres[this.messageres.length - 2].keyboardInput,
           message: [this.messageres[this.messageres.length - 2].defaultResponse],
           repeatMessage: this.messageres[this.messageres.length - 2].repeatMessage,
           smid: this.messageres[this.messageres.length - 2].smid,
           hasButtons: this.messageres[this.messageres.length - 2].hasButtons,
-          endChat:this.messageres[this.messageres.length - 2].endChat,
-          type: "Agent"
+          endChat: this.messageres[this.messageres.length - 2].endChat,
+          type: "Agent", attributeValue: this.messageres[this.messageres.length - 2].attributeValue
         })
       }
 
@@ -265,8 +389,56 @@ export class ChatboxComponent implements OnInit {
 
     }
 
+
     window.scrollTo(0, document.body.scrollHeight);
     this.msg = undefined
+  }
+
+  ResponseTimer(time: any, route: any) {
+    // alert("ResponseTimer " + route)
+    this.noResponseInterval = setInterval(() => {
+      if (time > 0) {
+        time--;
+      } else {
+        clearInterval(this.noResponseInterval);
+
+        let timeoutMessage = this.businessConfigurations.filter(d => d.configurationName == 'NoResponseTimeoutMessage')
+
+        this.messageres.push({
+          smid: this.messageres[this.messageres.length - 1].smid, type: 'Agent', message: timeoutMessage[0].configurationValue.split("\\n"),
+          buttonValues: [{}], keyboardInput: this.messageres[this.messageres.length - 1].keyboardInput, expectedInput: this.messageres[this.messageres.length - 1].expectedInput, repeatMessage: this.messageres[this.messageres.length - 1].repeatMessage,
+          defaultResponse: this.messageres[this.messageres.length - 1].defaultResponse, hasButtons: 0, endChat: this.messageres[this.messageres.length - 1].endChat, attributeValue: this.messageres[this.messageres.length - 1].attributeValue
+        })
+        // let int;
+        // int = setInterval(() => {
+        if (route == undefined) {
+          this.endSession();
+        }
+        //   clearInterval(int);
+        // }, 2000)
+
+      }
+    }, 1000)
+  }
+
+  getBusinessConfigurations(bid: any) {
+    if (localStorage.getItem("businessConfigurations") == null || localStorage.getItem("businessConfigurations") == undefined) {
+      this.chatbbot_service.businessConfigurations({ actionFlag: "FETCH", bid: bid, fromCache: true }).subscribe(res => {
+        console.log(res)
+        if (res.status == 200) {
+          this.noResponseTimeout = res.data.filter(d => d.configurationName == 'NoResponseTimeout');
+          this.noResponseTimeout = this.noResponseTimeout[0].configurationValue
+          localStorage.setItem("businessConfigurations", JSON.stringify(res.data));
+          this.businessConfigurations = res.data;
+        }
+      })
+    } else {
+      let configurations = JSON.parse(localStorage.getItem("businessConfigurations"))
+      this.businessConfigurations = configurations;
+      this.noResponseTimeout = configurations.filter(d => d.configurationName == 'NoResponseTimeout');
+      this.noResponseTimeout = this.noResponseTimeout[0].configurationValue
+
+    }
   }
 
   fetchUserConversation() {
@@ -286,13 +458,13 @@ export class ChatboxComponent implements OnInit {
               this.messageres.push({
                 smid: d.id, type: 'Agent', message: d.response.split("\\n"),
                 buttonValues: JSON.parse(d.buttonValues), keyboardInput: d.keyboardInput, expectedInput: d.expectedInput, repeatMessage: d.repeatMessage,
-                defaultResponse: d.defaultResponse, hasButtons: d.hasButtons, endChat:d.endChat
+                defaultResponse: d.defaultResponse, hasButtons: d.hasButtons, endChat: d.endChat, attributeValue: d.attributeValue
               })
             } else {
               this.messageres = [{
                 smid: d.id, type: 'Agent', message: d.response.split("\\n"),
                 buttonValues: JSON.parse(d.buttonValues), keyboardInput: d.keyboardInput, expectedInput: d.expectedInput, repeatMessage: d.repeatMessage,
-                defaultResponse: d.defaultResponse, hasButtons: d.hasButtons,endChat:d.endChat
+                defaultResponse: d.defaultResponse, hasButtons: d.hasButtons, endChat: d.endChat, attributeValue: d.attributeValue
               }]
             }
           }
@@ -319,18 +491,21 @@ export class ChatboxComponent implements OnInit {
   }
 
   endSession() {
-    this.chatbbot_service.endChat({CustomerId: this.cookieService.get("SessionId")}).subscribe(res => {
-      if(res.status == 200){
-        socket.emit("chatEnd","");
+    this.chatbbot_service.endChat({ CustomerId: this.cookieService.get("SessionId") }).subscribe(res => {
+      if (res.status == 200) {
+        // this.join();
+
+        socket.emit("chatEnd", "bid-" + this.orderObj.params.bid);
         localStorage.clear();
         this.cookieService.deleteAll();
         alert("chat ended");
         location.reload();
-      } else{
+      } else {
         alert("an expected error occured");
         // this.endSession();
       }
     })
   }
+
 
 }
