@@ -42,9 +42,6 @@ export class ChatboxComponent implements OnInit {
 
 
   ngOnInit(): void {
-    //get the business id from url
-    // socket.emit('join', "PVYmW8wZdJsXNNDcAAAY is the data")
-
     this.route.queryParamMap
       .subscribe((params) => {
         this.orderObj = { ...params.keys, ...params };
@@ -52,8 +49,8 @@ export class ChatboxComponent implements OnInit {
       }
       );
     //check if sessionid exists\
-    this.chatbbot_service.VerifyBusiness({ActionFlag:"FETCH",Action:"VerifyBusiness", bid: this.orderObj.params.bid }).subscribe(res => {
-      // alert(res.status)
+    this.chatbbot_service.VerifyBusiness({ ActionFlag: "FETCH", Action: "VerifyBusiness", bid: this.orderObj.params.bid, cacheEnabled:false }).subscribe(res => {
+      console.log(res)
       if (res.status == 200) {
         console.log(res.data)
         this.businessvfr = res.data[0];
@@ -107,14 +104,33 @@ export class ChatboxComponent implements OnInit {
           buttonValues: [{}], keyboardInput: 1
         })
       }
-    // }
+      // }
     )
     this.chatbbot_service.receiveAgentMessageBySocket();
-    this.chatbbot_service.dataState1.subscribe( data => {
+    this.chatbbot_service.dataState1.subscribe(data => {
       this.messageres.push({
         type: 'Agent', message: [data],
         buttonValues: [{}], keyboardInput: 1
       })
+    })
+
+    this.chatbbot_service.AgentChatEnd();
+    this.chatbbot_service.dataState2.subscribe(data => {
+      let endMessage = this.businessConfigurations.filter(d => d.configurationName == 'AgentChatEndMessage');
+      this.messageres.push({
+        type: 'Agent', message: endMessage[0].configurationValue.split("\\n"),
+        buttonValues: [{}], keyboardInput: 0
+      })
+      let timer = 3
+      this.interval = setInterval(() => {
+        if (timer > 0) {
+          timer--;
+        } else {
+          // this.defaultTimer = 60;
+          clearInterval(this.interval);
+          this.endSession();
+        }
+      }, 3000)
     })
     // if()
 
@@ -223,20 +239,6 @@ export class ChatboxComponent implements OnInit {
       let roomId = "bid-" + this.orderObj.params.bid
       socket.emit("fetchInteractions", roomId)
       socket.emit("join", this.cookieService.get("SessionId"))
-
-      // socket.on("agentJoined", data => {
-      // this.chatWithAgent = true;
-      // this.validate = true;
-      // // AgentJoinMessage
-      // let agentJoinMessage = this.businessConfigurations.filter(d => d.configurationName == 'AgentJoinMessage');
-      // console.log(this.businessConfigurations)
-      // this.messageres.push({
-      //   type: 'Agent', message: agentJoinMessage[0].configurationValue.split("\\n"),
-      //   buttonValues: [{}], keyboardInput: 1
-      // })
-      // })
-
-
     }
     var rid = 0;
 
@@ -426,6 +428,7 @@ export class ChatboxComponent implements OnInit {
       this.chatbbot_service.businessConfigurations({ actionFlag: "FETCH", bid: bid, fromCache: true }).subscribe(res => {
         console.log(res)
         if (res.status == 200) {
+          console.log("businessCOnfig ", res.data)
           this.noResponseTimeout = res.data.filter(d => d.configurationName == 'NoResponseTimeout');
           this.noResponseTimeout = this.noResponseTimeout[0].configurationValue
           localStorage.setItem("businessConfigurations", JSON.stringify(res.data));

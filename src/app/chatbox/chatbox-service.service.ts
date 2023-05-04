@@ -30,6 +30,9 @@ export class ChatboxServiceService {
   public dataSubject1 = new Subject<Data>();
   public dataState1 = this.dataSubject1.asObservable();
 
+  public dataSubject2 = new Subject<Data>();
+  public dataState2 = this.dataSubject2.asObservable();
+
   constructor(private http: HttpClient) {
     this.socket = io(this.url, { transports: ['websocket', 'polling', 'flashsocket'] });
   }
@@ -67,6 +70,13 @@ export class ChatboxServiceService {
         //  alert(msg);
       });
   }
+
+  AgentChatEnd():void{
+    this.socket.on("agentChatEndMessage", (data) => {
+      this.dataSubject2.next(data);
+    })
+  }
+
   SendAgentMessage(data: any): Observable<any> {
     return this.http.post(this.agentChat_url, data);
   }

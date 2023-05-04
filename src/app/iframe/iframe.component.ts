@@ -18,13 +18,16 @@ export class IframeComponent implements OnInit {
   }
 
   openIFrame() {
-    if(!this.displayIFrame){
-      this.iFrameUrl = this.sanitizer.bypassSecurityTrustResourceUrl( this.chatboxUrl);
+    if (!this.displayIFrame) {
+      this.iFrameUrl = this.sanitizer.bypassSecurityTrustResourceUrl(this.chatboxUrl);
       this.displayIFrame = true;
-    } else{
+    } else {
       this.displayIFrame = false;
-
     }
+  }
+
+  closeIFrame() {
+    this.displayIFrame = false;
   }
 
 }
